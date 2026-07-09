@@ -33,12 +33,15 @@ class FortifyServiceProvider extends ServiceProvider
 
         Fortify::authenticateUsing(function (Request $request) {
 
-    $request->validate([
-        'mobile_number' => ['required', 'regex:/^09\d{9}$/'],
-    ]);
+            // TEMPORARY DEBUG
+            dd($request->all());
 
-    return User::where('mobile_number', $request->mobile_number)->first();
-});
+            $request->validate([
+                'mobile_number' => ['required', 'regex:/^09\d{9}$/'],
+            ]);
+
+            return User::where('mobile_number', $request->mobile_number)->first();
+        });
     }
 
     /**
@@ -74,7 +77,9 @@ class FortifyServiceProvider extends ServiceProvider
         });
 
         RateLimiter::for('login', function (Request $request) {
-            $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());
+            $throttleKey = Str::transliterate(
+                Str::lower($request->input(Fortify::username())) . '|' . $request->ip()
+            );
 
             return Limit::perMinute(5)->by($throttleKey);
         });
@@ -83,7 +88,7 @@ class FortifyServiceProvider extends ServiceProvider
             $credentialId = $request->input('credential.id');
 
             return Limit::perMinute(10)->by(
-                ($credentialId ?: $request->session()->getId()).'|'.$request->ip(),
+                ($credentialId ?: $request->session()->getId()) . '|' . $request->ip(),
             );
         });
     }
