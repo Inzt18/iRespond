@@ -9,7 +9,8 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: 'Source Sans 3', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+    --font-display: 'Barlow Condensed', 'Source Sans 3', ui-sans-serif, system-ui, sans-serif;
 
     --color-zinc-50: #fafafa;
     --color-zinc-100: #f5f5f5;
@@ -23,27 +24,73 @@
     --color-zinc-900: #171717;
     --color-zinc-950: #0a0a0a;
 
-    --color-accent: var(--color-neutral-800);
-    --color-accent-content: var(--color-neutral-800);
+    /* Emergency response accent — matches Flutter citizen app red */
+    --color-emergency: #c1121f;
+    --color-emergency-dark: #7a0b14;
+    --color-emergency-soft: #fee2e2;
+
+    --color-accent: var(--color-emergency);
+    --color-accent-content: var(--color-emergency);
     --color-accent-foreground: var(--color-white);
 }
 
 @layer theme {
     .dark {
-        --color-accent: var(--color-white);
-        --color-accent-content: var(--color-white);
-        --color-accent-foreground: var(--color-neutral-800);
+        --color-accent: var(--color-emergency);
+        --color-accent-content: #fda4af;
+        --color-accent-foreground: var(--color-white);
     }
 }
 
 @layer base {
-
     *,
     ::after,
     ::before,
     ::backdrop,
     ::file-selector-button {
         border-color: var(--color-gray-200, currentColor);
+    }
+
+    body {
+        font-family: var(--font-sans);
+    }
+}
+
+@layer components {
+    .font-display {
+        font-family: var(--font-display);
+        letter-spacing: 0.02em;
+    }
+
+    .irespond-auth-panel {
+        background:
+            radial-gradient(ellipse 80% 60% at 20% 20%, rgba(193, 18, 31, 0.45), transparent 55%),
+            radial-gradient(ellipse 70% 50% at 90% 80%, rgba(193, 18, 31, 0.25), transparent 50%),
+            linear-gradient(160deg, #14080a 0%, #1c0f12 40%, #0b0b0c 100%);
+    }
+
+    .irespond-grid {
+        background-image:
+            linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+        background-size: 36px 36px;
+    }
+
+    .irespond-pulse-ring {
+        box-shadow: 0 0 0 0 rgba(193, 18, 31, 0.55);
+        animation: irespond-pulse 2.4s ease-out infinite;
+    }
+
+    @keyframes irespond-pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(193, 18, 31, 0.5);
+        }
+        70% {
+            box-shadow: 0 0 0 18px rgba(193, 18, 31, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(193, 18, 31, 0);
+        }
     }
 }
 
@@ -52,7 +99,7 @@
 }
 
 [data-flux-label] {
-    @apply  !mb-0 !leading-tight;
+    @apply !mb-0 !leading-tight;
 }
 
 input:focus[data-flux-control],
@@ -60,7 +107,3 @@ textarea:focus[data-flux-control],
 select:focus[data-flux-control] {
     @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-accent-foreground;
 }
-
-/* \[:where(&)\]:size-4 {
-    @apply size-4;
-} */

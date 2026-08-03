@@ -15,7 +15,18 @@ use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['mobile_number'])]
+#[Fillable([
+    'name',
+    'first_name',
+    'middle_name',
+    'last_name',
+    'email',
+    'username',
+    'password',
+    'mobile_number',
+    'role',
+    'is_active',
+])]
 #[Hidden([
     'password',
     'remember_token',
@@ -27,31 +38,42 @@ class User extends Authenticatable implements PasskeyUser
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
-    /**
-     * Attribute casting.
-     */
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_active' => 'boolean',
         ];
     }
 
-    /**
-     * Get the user's initials.
-     */
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
     public function initials(): string
     {
-        if (empty($this->name)) {
-            return '';
+        if (! empty($this->first_name) || ! empty($this->last_name)) {
+            return Str::upper(
+                Str::substr((string) $this->first_name, 0, 1).
+                Str::substr((string) $this->last_name, 0, 1)
+            );
         }
 
-        return Str::of($this->name)
-            ->explode(' ')
-            ->take(2)
-            ->map(fn ($word) => Str::substr($word, 0, 1))
-            ->implode('');
+        if (! empty($this->name)) {
+            return Str::of($this->name)
+                ->explode(' ')
+                ->take(2)
+                ->map(fn ($word) => Str::substr($word, 0, 1))
+                ->implode('');
+        }
+
+        if (! empty($this->username)) {
+            return Str::upper(Str::substr($this->username, 0, 2));
+        }
+
+        return Str::substr((string) $this->mobile_number, -2);
     }
 
     public function emergencyReports(): HasMany
