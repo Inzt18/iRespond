@@ -13,6 +13,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::livewire('admin/reports', 'pages::admin.reports')->name('admin.reports');
     Route::livewire('admin/reports/{report}', 'pages::admin.report-show')->name('admin.reports.show');
     Route::livewire('admin/map', 'pages::admin.map')->name('admin.map');
+    Route::livewire('admin/responders', 'pages::admin.responders')->name('admin.responders');
     Route::livewire('admin/hotlines', 'pages::admin.hotlines')->name('admin.hotlines');
     Route::livewire('admin/users', 'pages::admin.users')->name('admin.users');
 });

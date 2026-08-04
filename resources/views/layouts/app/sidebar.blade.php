@@ -32,6 +32,9 @@
                     <flux:sidebar.item icon="map" :href="route('admin.map')" :current="request()->routeIs('admin.map')" wire:navigate>
                         {{ __('GIS Map') }}
                     </flux:sidebar.item>
+                    <flux:sidebar.item icon="shield-check" :href="route('admin.responders')" :current="request()->routeIs('admin.responders')" wire:navigate>
+                        {{ __('Responders') }}
+                    </flux:sidebar.item>
                     <flux:sidebar.item icon="phone" :href="route('admin.hotlines')" :current="request()->routeIs('admin.hotlines')" wire:navigate>
                         {{ __('Hotlines') }}
                     </flux:sidebar.item>

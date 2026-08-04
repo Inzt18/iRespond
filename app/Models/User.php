@@ -25,6 +25,8 @@ use Laravel\Sanctum\HasApiTokens;
     'password',
     'mobile_number',
     'role',
+    'department_type',
+    'department_name',
     'is_active',
 ])]
 #[Hidden([
@@ -38,6 +40,12 @@ class User extends Authenticatable implements PasskeyUser
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
+    public const DEPARTMENTS = [
+        'fire' => 'Fire Department',
+        'medical' => 'Medical Department',
+        'natural_disaster' => 'Disaster Risk Department',
+    ];
+
     protected function casts(): array
     {
         return [
@@ -50,6 +58,21 @@ class User extends Authenticatable implements PasskeyUser
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
+    }
+
+    public function isResponder(): bool
+    {
+        return $this->role === 'responder';
+    }
+
+    public function isCitizen(): bool
+    {
+        return ($this->role ?? 'citizen') === 'citizen';
+    }
+
+    public function departmentLabel(): string
+    {
+        return self::DEPARTMENTS[$this->department_type] ?? ($this->department_name ?: 'Responder');
     }
 
     public function initials(): string
