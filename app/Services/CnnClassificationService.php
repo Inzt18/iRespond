@@ -36,7 +36,7 @@ class CnnClassificationService
 
         if (! $response->successful()) {
             throw new RuntimeException(
-                'CNN classification failed: '.$response->body()
+                'CNN classification failed (HTTP '.$response->status().'). Is the CNN service running on port 8001?'
             );
         }
 
