@@ -49,6 +49,10 @@ class CnnClassificationService
         return [
             'label' => (string) $data['label'],
             'confidence' => (float) $data['confidence'],
+            'margin' => isset($data['margin']) ? (float) $data['margin'] : null,
+            'is_emergency' => array_key_exists('is_emergency', $data)
+                ? (bool) $data['is_emergency']
+                : in_array($data['label'], ['fire', 'medical', 'natural_disaster'], true),
             'probabilities' => $data['probabilities'] ?? [],
         ];
     }

@@ -40,12 +40,61 @@ class EmergencyReportController extends Controller
             ], 502);
         }
 
+        $confidence = (float) $result['confidence'];
+        $minConfidence = 0.85;
+        $label = (string) $result['label'];
+        $isEmergency = (bool) ($result['is_emergency'] ?? in_array($label, self::TYPES, true));
+        $margin = $result['margin'] ?? null;
+        $confidencePct = number_format($confidence * 100, 1);
+        $minPct = number_format($minConfidence * 100, 0);
+
+        // Reject unrelated / non-emergency photos (4th CNN class).
+        if (! $isEmergency || $label === 'non_emergency') {
+            Storage::disk('public')->delete($path);
+
+            return response()->json([
+                'success' => false,
+                'message' => "Image does not appear to be an emergency (CNN confidence: {$confidencePct}%). Please upload a clear emergency-related photo.",
+                'confidence' => $confidence,
+                'suggested_type' => $label,
+                'probabilities' => $result['probabilities'],
+            ], 422);
+        }
+
+        // Reject uncertain predictions (top classes too close).
+        if ($margin !== null && (float) $margin < 0.15) {
+            Storage::disk('public')->delete($path);
+            $marginPct = number_format(((float) $margin) * 100, 1);
+
+            return response()->json([
+                'success' => false,
+                'message' => "Image classification is uncertain (CNN confidence: {$confidencePct}%, margin: {$marginPct}%). Please upload a clearer emergency photo.",
+                'confidence' => $confidence,
+                'margin' => $margin,
+                'suggested_type' => $label,
+                'probabilities' => $result['probabilities'],
+            ], 422);
+        }
+
+        if ($confidence < $minConfidence) {
+            Storage::disk('public')->delete($path);
+
+            return response()->json([
+                'success' => false,
+                'message' => "Image did not meet standard Confidence Level Percentage ({$confidencePct}% < {$minPct}% required). Please try again.",
+                'confidence' => $confidence,
+                'min_confidence' => $minConfidence,
+                'suggested_type' => $label,
+                'probabilities' => $result['probabilities'],
+            ], 422);
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Image classified successfully.',
             'temp_image_path' => $path,
-            'suggested_type' => $result['label'],
-            'confidence' => $result['confidence'],
+            'suggested_type' => $label,
+            'confidence' => $confidence,
             'probabilities' => $result['probabilities'],
         ]);
     }
@@ -58,7 +107,7 @@ class EmergencyReportController extends Controller
         $validated = $request->validate([
             'confirmed_type' => ['required', 'in:'.implode(',', self::TYPES)],
             'predicted_type' => ['nullable', 'in:'.implode(',', self::TYPES)],
-            'confidence' => ['nullable', 'numeric', 'min:0', 'max:1'],
+            'confidence' => ['nullable', 'numeric', 'min:0.85', 'max:1'],
             'latitude' => ['required', 'numeric', 'between:-90,90'],
             'longitude' => ['required', 'numeric', 'between:-180,180'],
             'temp_image_path' => ['nullable', 'string'],
