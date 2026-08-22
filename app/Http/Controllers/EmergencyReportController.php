@@ -41,10 +41,12 @@ class EmergencyReportController extends Controller
         }
 
         $confidence = (float) $result['confidence'];
-        $minConfidence = 0.85;
+        // 80% is a better demo/phone-photo balance than 85% (floods often land 70–84%).
+        $minConfidence = 0.80;
         $label = (string) $result['label'];
         $isEmergency = (bool) ($result['is_emergency'] ?? in_array($label, self::TYPES, true));
         $margin = $result['margin'] ?? null;
+        $minMargin = 0.10;
         $confidencePct = number_format($confidence * 100, 1);
         $minPct = number_format($minConfidence * 100, 0);
 
@@ -54,7 +56,7 @@ class EmergencyReportController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => "Image does not appear to be an emergency (CNN confidence: {$confidencePct}%). Please upload a clear emergency-related photo.",
+                'message' => "Image does not appear to be an emergency (CNN top: {$label}, {$confidencePct}%). Please upload a clear emergency-related photo.",
                 'confidence' => $confidence,
                 'suggested_type' => $label,
                 'probabilities' => $result['probabilities'],
@@ -62,13 +64,13 @@ class EmergencyReportController extends Controller
         }
 
         // Reject uncertain predictions (top classes too close).
-        if ($margin !== null && (float) $margin < 0.15) {
+        if ($margin !== null && (float) $margin < $minMargin) {
             Storage::disk('public')->delete($path);
             $marginPct = number_format(((float) $margin) * 100, 1);
 
             return response()->json([
                 'success' => false,
-                'message' => "Image classification is uncertain (CNN confidence: {$confidencePct}%, margin: {$marginPct}%). Please upload a clearer emergency photo.",
+                'message' => "Image classification is uncertain (top: {$label} {$confidencePct}%, margin: {$marginPct}%). Please upload a clearer emergency photo.",
                 'confidence' => $confidence,
                 'margin' => $margin,
                 'suggested_type' => $label,
@@ -107,7 +109,7 @@ class EmergencyReportController extends Controller
         $validated = $request->validate([
             'confirmed_type' => ['required', 'in:'.implode(',', self::TYPES)],
             'predicted_type' => ['nullable', 'in:'.implode(',', self::TYPES)],
-            'confidence' => ['nullable', 'numeric', 'min:0.85', 'max:1'],
+            'confidence' => ['nullable', 'numeric', 'min:0.80', 'max:1'],
             'latitude' => ['required', 'numeric', 'between:-90,90'],
             'longitude' => ['required', 'numeric', 'between:-180,180'],
             'temp_image_path' => ['nullable', 'string'],
