@@ -13,17 +13,17 @@ class ResponderHotlineSeeder extends Seeder
             [
                 'type' => 'fire',
                 'label' => 'Fire',
-                'phone_number' => '116',
+                'phone_number' => '09089656236',
             ],
             [
                 'type' => 'medical',
                 'label' => 'Medical',
-                'phone_number' => '911',
+                'phone_number' => '09456226214',
             ],
             [
                 'type' => 'natural_disaster',
                 'label' => 'Natural Disaster',
-                'phone_number' => '911',
+                'phone_number' => '09384740446',
             ],
         ];
 
