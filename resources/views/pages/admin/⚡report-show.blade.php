@@ -57,7 +57,11 @@ new #[Title('Report Detail')] class extends Component {
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
                 <flux:heading size="xl">{{ __('Report #:id', ['id' => $report->id]) }}</flux:heading>
-                <flux:text class="mt-1">{{ __('Submitted :when', ['when' => $report->created_at]) }}</flux:text>
+                <flux:text class="mt-1">
+                    {{ __('Submitted :when', [
+                        'when' => $report->created_at?->timezone(config('app.timezone'))->format('M d, Y g:i A'),
+                    ]) }}
+                </flux:text>
             </div>
             <flux:button variant="ghost" :href="route('admin.reports')" wire:navigate>
                 {{ __('Back to list') }}

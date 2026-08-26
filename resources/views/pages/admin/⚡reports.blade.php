@@ -103,6 +103,7 @@ new #[Title('Emergency Reports')] class extends Component {
                     <thead class="border-b border-zinc-200 text-left dark:border-zinc-700">
                         <tr>
                             <th class="px-2 py-2">{{ __('ID') }}</th>
+                            <th class="px-2 py-2">{{ __('Date') }}</th>
                             <th class="px-2 py-2">{{ __('Confirmed') }}</th>
                             <th class="px-2 py-2">{{ __('Predicted') }}</th>
                             <th class="px-2 py-2">{{ __('Confidence') }}</th>
@@ -116,6 +117,9 @@ new #[Title('Emergency Reports')] class extends Component {
                         @forelse ($reports as $report)
                             <tr class="border-b border-zinc-100 dark:border-zinc-800">
                                 <td class="px-2 py-2">#{{ $report->id }}</td>
+                                <td class="px-2 py-2 whitespace-nowrap">
+                                    {{ $report->created_at?->timezone(config('app.timezone'))->format('M d, Y g:i A') }}
+                                </td>
                                 <td class="px-2 py-2">{{ $report->confirmed_type }}</td>
                                 <td class="px-2 py-2">{{ $report->predicted_type ?? '—' }}</td>
                                 <td class="px-2 py-2">
@@ -142,7 +146,7 @@ new #[Title('Emergency Reports')] class extends Component {
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="px-2 py-6 text-center text-zinc-500">{{ __('No reports found.') }}</td>
+                                <td colspan="9" class="px-2 py-6 text-center text-zinc-500">{{ __('No reports found.') }}</td>
                             </tr>
                         @endforelse
                     </tbody>

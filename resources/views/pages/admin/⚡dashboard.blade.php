@@ -98,6 +98,7 @@ new #[Title('Admin Dashboard')] class extends Component {
                     <thead class="border-b border-zinc-200 text-left dark:border-zinc-700">
                         <tr>
                             <th class="px-2 py-2">{{ __('ID') }}</th>
+                            <th class="px-2 py-2">{{ __('Date') }}</th>
                             <th class="px-2 py-2">{{ __('Type') }}</th>
                             <th class="px-2 py-2">{{ __('Status') }}</th>
                             <th class="px-2 py-2">{{ __('Reporter') }}</th>
@@ -109,6 +110,9 @@ new #[Title('Admin Dashboard')] class extends Component {
                         @forelse ($recentReports as $report)
                             <tr class="border-b border-zinc-100 dark:border-zinc-800">
                                 <td class="px-2 py-2">#{{ $report->id }}</td>
+                                <td class="px-2 py-2 whitespace-nowrap">
+                                    {{ $report->created_at?->timezone(config('app.timezone'))->format('M d, Y g:i A') }}
+                                </td>
                                 <td class="px-2 py-2">{{ str_replace('_', ' ', $report->confirmed_type) }}</td>
                                 <td class="px-2 py-2">{{ $report->status }}</td>
                                 <td class="px-2 py-2">{{ $report->user?->mobile_number ?? '—' }}</td>
@@ -127,7 +131,7 @@ new #[Title('Admin Dashboard')] class extends Component {
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-2 py-6 text-center text-zinc-500">{{ __('No reports yet.') }}</td>
+                                <td colspan="7" class="px-2 py-6 text-center text-zinc-500">{{ __('No reports yet.') }}</td>
                             </tr>
                         @endforelse
                     </tbody>
