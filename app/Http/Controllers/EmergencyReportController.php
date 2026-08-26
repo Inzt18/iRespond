@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ClassificationRejection;
 use App\Models\EmergencyReport;
 use App\Services\CnnClassificationService;
 use Illuminate\Http\JsonResponse;
@@ -52,7 +53,8 @@ class EmergencyReportController extends Controller
 
         // Reject unrelated / non-emergency photos (4th CNN class).
         if (! $isEmergency || $label === 'non_emergency') {
-            Storage::disk('public')->delete($path);
+            $keptPath = $this->keepRejectedImage($path, 'non_emergency');
+            $this->logRejection($request, $result, 'non_emergency', $keptPath);
 
             return response()->json([
                 'success' => false,
@@ -66,6 +68,7 @@ class EmergencyReportController extends Controller
         // Reject uncertain predictions (top classes too close).
         if ($margin !== null && (float) $margin < $minMargin) {
             Storage::disk('public')->delete($path);
+            $this->logRejection($request, $result, 'uncertain');
             $marginPct = number_format(((float) $margin) * 100, 1);
 
             return response()->json([
@@ -80,6 +83,7 @@ class EmergencyReportController extends Controller
 
         if ($confidence < $minConfidence) {
             Storage::disk('public')->delete($path);
+            $this->logRejection($request, $result, 'low_confidence');
 
             return response()->json([
                 'success' => false,
@@ -99,6 +103,43 @@ class EmergencyReportController extends Controller
             'confidence' => $confidence,
             'probabilities' => $result['probabilities'],
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $result
+     */
+    private function logRejection(
+        Request $request,
+        array $result,
+        string $reason,
+        ?string $imagePath = null,
+    ): void {
+        $user = $request->user();
+
+        ClassificationRejection::query()->create([
+            'user_id' => $user?->id,
+            'mobile_number' => $user?->mobile_number,
+            'predicted_label' => (string) ($result['label'] ?? 'unknown'),
+            'reason' => $reason,
+            'confidence' => isset($result['confidence']) ? (float) $result['confidence'] : null,
+            'margin' => isset($result['margin']) ? (float) $result['margin'] : null,
+            'probabilities' => $result['probabilities'] ?? null,
+            'image_path' => $imagePath,
+        ]);
+    }
+
+    private function keepRejectedImage(string $tempPath, string $folder): ?string
+    {
+        $disk = Storage::disk('public');
+        if (! $disk->exists($tempPath)) {
+            return null;
+        }
+
+        $filename = basename($tempPath);
+        $finalPath = "emergencies/rejected/{$folder}/{$filename}";
+        $disk->move($tempPath, $finalPath);
+
+        return $finalPath;
     }
 
     /**

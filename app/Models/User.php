@@ -103,4 +103,9 @@ class User extends Authenticatable implements PasskeyUser
     {
         return $this->hasMany(EmergencyReport::class);
     }
+
+    public function classificationRejections(): HasMany
+    {
+        return $this->hasMany(ClassificationRejection::class);
+    }
 }

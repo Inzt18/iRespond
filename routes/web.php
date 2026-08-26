@@ -16,6 +16,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::livewire('admin/responders', 'pages::admin.responders')->name('admin.responders');
     Route::livewire('admin/hotlines', 'pages::admin.hotlines')->name('admin.hotlines');
     Route::livewire('admin/users', 'pages::admin.users')->name('admin.users');
+    Route::livewire('admin/non-emergencies', 'pages::admin.non-emergencies')->name('admin.non-emergencies');
 });
 
 require __DIR__.'/settings.php';

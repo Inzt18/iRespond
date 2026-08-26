@@ -1,10 +1,17 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
         @include('partials.head')
+        {{-- Force light / white admin theme (ignore saved dark preference) --}}
+        <script>
+            (() => {
+                localStorage.setItem('flux.appearance', 'light');
+                document.documentElement.classList.remove('dark');
+            })();
+        </script>
     </head>
-    <body class="min-h-screen bg-zinc-100 dark:bg-zinc-900">
-        <flux:sidebar sticky collapsible="mobile" class="border-e border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950">
+    <body class="min-h-screen bg-white text-zinc-900 antialiased">
+        <flux:sidebar sticky collapsible="mobile" class="border-e border-zinc-200 bg-white">
             <flux:sidebar.header>
                 <x-app-logo :sidebar="true" href="{{ route('dashboard') }}" wire:navigate />
                 <flux:sidebar.collapse class="lg:hidden" />
@@ -15,7 +22,7 @@
                     <p class="font-display text-xs font-semibold uppercase tracking-[0.16em] text-emergency">
                         {{ __('Command Center') }}
                     </p>
-                    <p class="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                    <p class="mt-0.5 text-xs text-zinc-500">
                         {{ __('Integrity monitoring') }}
                     </p>
                 </div>
@@ -41,6 +48,9 @@
                     <flux:sidebar.item icon="users" :href="route('admin.users')" :current="request()->routeIs('admin.users')" wire:navigate>
                         {{ __('Users') }}
                     </flux:sidebar.item>
+                    <flux:sidebar.item icon="no-symbol" :href="route('admin.non-emergencies')" :current="request()->routeIs('admin.non-emergencies')" wire:navigate>
+                        {{ __('Non-Emergency') }}
+                    </flux:sidebar.item>
                 </flux:sidebar.group>
             </flux:sidebar.nav>
 
@@ -56,7 +66,7 @@
         </flux:sidebar>
 
         <!-- Mobile User Menu -->
-        <flux:header class="lg:hidden">
+        <flux:header class="lg:hidden border-b border-zinc-200 bg-white">
             <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
 
             <flux:spacer />
