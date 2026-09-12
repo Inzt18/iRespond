@@ -17,6 +17,8 @@ Route::middleware(['auth'])->group(function () {
 
 Route::middleware(['auth', 'admin'])->group(function () {
     Route::livewire('dashboard', 'pages::admin.dashboard')->name('dashboard');
+    Route::livewire('admin/analytics', 'pages::admin.analytics')->name('admin.analytics');
+    Route::livewire('admin/notifications', 'pages::admin.notifications')->name('admin.notifications');
     Route::livewire('admin/reports', 'pages::admin.reports')->name('admin.reports');
     Route::livewire('admin/reports/{report}', 'pages::admin.report-show')->name('admin.reports.show');
     Route::livewire('admin/map', 'pages::admin.map')->name('admin.map');

@@ -33,6 +33,12 @@
                     <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
                         {{ __('Dashboard') }}
                     </flux:sidebar.item>
+                    <flux:sidebar.item icon="chart-bar" :href="route('admin.analytics')" :current="request()->routeIs('admin.analytics')" wire:navigate>
+                        {{ __('Analytics') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="bell" :href="route('admin.notifications')" :current="request()->routeIs('admin.notifications')" wire:navigate>
+                        {{ __('Notifications') }}
+                    </flux:sidebar.item>
                     <flux:sidebar.item icon="clipboard-document-list" :href="route('admin.reports')" :current="request()->routeIs('admin.reports') || request()->routeIs('admin.reports.show')" wire:navigate>
                         {{ __('Reports') }}
                     </flux:sidebar.item>
@@ -56,6 +62,10 @@
 
             <flux:spacer />
 
+            <div class="hidden px-4 pb-2 lg:block">
+                <livewire:admin-notification-bell />
+            </div>
+
             <flux:sidebar.nav>
                 <flux:sidebar.item icon="cog-6-tooth" :href="route('profile.edit')" :current="request()->routeIs('profile.edit')" wire:navigate>
                     {{ __('Settings') }}
@@ -70,6 +80,10 @@
             <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
 
             <flux:spacer />
+
+            <div class="me-2">
+                <livewire:admin-notification-bell />
+            </div>
 
             <flux:dropdown position="top" align="end">
                 <flux:profile

@@ -69,13 +69,18 @@ new #[Title('Admin Dashboard')] class extends Component {
         </div>
 
         <flux:card>
-            <flux:heading size="lg" class="mb-3">{{ __('By Emergency Type') }}</flux:heading>
+            <div class="mb-4 flex items-center justify-between">
+                <flux:heading size="lg">{{ __('By Emergency Type') }}</flux:heading>
+                <flux:button size="sm" variant="ghost" :href="route('admin.analytics')" wire:navigate>
+                    {{ __('Analytics') }}
+                </flux:button>
+            </div>
             <div class="grid gap-3 sm:grid-cols-3">
                 @foreach (['fire' => 'Fire', 'medical' => 'Medical', 'natural_disaster' => 'Natural Disaster'] as $key => $label)
-                    <div class="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
+                    <a href="{{ route('admin.reports', ['type' => $key]) }}" wire:navigate class="rounded-lg border border-zinc-200 p-3 transition hover:bg-zinc-50 dark:border-zinc-700">
                         <flux:text>{{ $label }}</flux:text>
                         <flux:heading>{{ $byType[$key] ?? 0 }}</flux:heading>
-                    </div>
+                    </a>
                 @endforeach
             </div>
         </flux:card>

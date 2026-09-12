@@ -72,10 +72,52 @@ new #[Title('Emergency Reports')] class extends Component {
 }; ?>
 
 <div class="flex h-full w-full flex-1 flex-col gap-6 p-4 md:p-6">
-        <div>
-            <flux:heading size="xl">{{ __('Emergency Reports') }}</flux:heading>
-            <flux:text class="mt-1">{{ __('Monitor all citizen submissions for integrity.') }}</flux:text>
+        <div class="flex flex-wrap items-end justify-between gap-4">
+            <div>
+                <flux:heading size="xl">{{ __('Emergency Reports') }}</flux:heading>
+                <flux:text class="mt-1">{{ __('Monitor all citizen submissions for integrity.') }}</flux:text>
+            </div>
+            <flux:button size="sm" variant="ghost" :href="route('admin.analytics')" wire:navigate>
+                {{ __('Analytics') }}
+            </flux:button>
         </div>
+
+        <flux:card>
+            <flux:text class="mb-3 text-sm font-medium text-zinc-700">{{ __('Category') }}</flux:text>
+            <div class="flex flex-wrap gap-2">
+                <flux:button
+                    size="sm"
+                    wire:click="$set('type', '')"
+                    :variant="$type === '' ? 'primary' : 'ghost'"
+                >
+                    {{ __('All') }}
+                </flux:button>
+                <flux:button
+                    size="sm"
+                    wire:click="$set('type', 'fire')"
+                    :variant="$type === 'fire' ? 'primary' : 'ghost'"
+                    class="{{ $type === 'fire' ? '' : '!text-red-700' }}"
+                >
+                    {{ __('Fire') }}
+                </flux:button>
+                <flux:button
+                    size="sm"
+                    wire:click="$set('type', 'medical')"
+                    :variant="$type === 'medical' ? 'primary' : 'ghost'"
+                    class="{{ $type === 'medical' ? '' : '!text-blue-700' }}"
+                >
+                    {{ __('Medical') }}
+                </flux:button>
+                <flux:button
+                    size="sm"
+                    wire:click="$set('type', 'natural_disaster')"
+                    :variant="$type === 'natural_disaster' ? 'primary' : 'ghost'"
+                    class="{{ $type === 'natural_disaster' ? '' : '!text-orange-700' }}"
+                >
+                    {{ __('Natural Disaster') }}
+                </flux:button>
+            </div>
+        </flux:card>
 
         <flux:card class="grid gap-3 md:grid-cols-4">
             <flux:input wire:model.live.debounce.300ms="search" :label="__('Search ID / mobile')" placeholder="09... or report id" />
@@ -87,10 +129,10 @@ new #[Title('Emergency Reports')] class extends Component {
                 <option value="invalid">invalid</option>
             </flux:select>
             <flux:select wire:model.live="type" :label="__('Type')">
-                <option value="">{{ __('All') }}</option>
-                <option value="fire">fire</option>
-                <option value="medical">medical</option>
-                <option value="natural_disaster">natural_disaster</option>
+                <option value="">{{ __('All types') }}</option>
+                <option value="fire">{{ __('Fire') }}</option>
+                <option value="medical">{{ __('Medical') }}</option>
+                <option value="natural_disaster">{{ __('Natural Disaster') }}</option>
             </flux:select>
             <div class="flex items-end">
                 <flux:checkbox wire:model.live="flaggedOnly" :label="__('Flagged only')" />
