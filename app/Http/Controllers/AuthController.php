@@ -4,15 +4,42 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
+use App\Http\Requests\SendRegistrationOtpRequest;
 use App\Models\User;
+use App\Services\OtpService;
+use Illuminate\Http\JsonResponse;
 
 class AuthController extends Controller
 {
+    public function __construct(private OtpService $otp) {}
+
     /**
-     * Register a new citizen (Flutter).
+     * Send OTP to a new citizen mobile number (Flutter).
      */
-    public function register(RegisterRequest $request)
+    public function sendRegistrationOtp(SendRegistrationOtpRequest $request): JsonResponse
     {
+        $result = $this->otp->sendRegistrationOtp($request->mobile_number);
+
+        $payload = [
+            'success' => true,
+            'message' => 'OTP sent to your mobile number.',
+            'expires_in' => $result['expires_in'],
+        ];
+
+        if (isset($result['debug_otp'])) {
+            $payload['debug_otp'] = $result['debug_otp'];
+        }
+
+        return response()->json($payload);
+    }
+
+    /**
+     * Register a new citizen after OTP verification (Flutter).
+     */
+    public function register(RegisterRequest $request): JsonResponse
+    {
+        $this->otp->verifyRegistrationOtp($request->mobile_number, $request->otp);
+
         $user = User::create([
             'mobile_number' => $request->mobile_number,
             'role' => 'citizen',
@@ -32,7 +59,7 @@ class AuthController extends Controller
     /**
      * Login citizen or LGU responder by mobile number.
      */
-    public function login(LoginRequest $request)
+    public function login(LoginRequest $request): JsonResponse
     {
         $user = User::where('mobile_number', $request->mobile_number)->first();
 
@@ -68,7 +95,7 @@ class AuthController extends Controller
         ], 200);
     }
 
-    public function logout()
+    public function logout(): JsonResponse
     {
         auth()->user()->currentAccessToken()->delete();
 

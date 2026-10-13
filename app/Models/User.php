@@ -28,6 +28,9 @@ use Laravel\Sanctum\HasApiTokens;
     'department_type',
     'department_name',
     'is_active',
+    'last_latitude',
+    'last_longitude',
+    'last_location_at',
 ])]
 #[Hidden([
     'password',
@@ -52,6 +55,9 @@ class User extends Authenticatable implements PasskeyUser
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'last_latitude' => 'float',
+            'last_longitude' => 'float',
+            'last_location_at' => 'datetime',
         ];
     }
 

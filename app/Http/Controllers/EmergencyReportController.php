@@ -206,10 +206,16 @@ class EmergencyReportController extends Controller
     public function index(Request $request): JsonResponse
     {
         $reports = EmergencyReport::query()
+            ->with('assignedResponder:id,name,mobile_number,last_latitude,last_longitude,last_location_at')
             ->where('user_id', $request->user()->id)
             ->latest()
             ->get()
             ->map(function (EmergencyReport $report) {
+                $responder = $report->assignedResponder;
+                $hasResponderLocation = $responder
+                    && $responder->last_latitude !== null
+                    && $responder->last_longitude !== null;
+
                 return [
                     'id' => $report->id,
                     'confirmed_type' => $report->confirmed_type,
@@ -218,7 +224,17 @@ class EmergencyReportController extends Controller
                     'latitude' => $report->latitude,
                     'longitude' => $report->longitude,
                     'status' => $report->status,
-                    'image_url' => Storage::disk('public')->url($report->image_path),
+                    'image_url' => $report->imageUrl(),
+                    'resolution_image_url' => $report->resolutionImageUrl(),
+                    'authenticity_status' => $report->authenticity_status,
+                    'authenticity_note' => $report->authenticity_note,
+                    'assigned_responder_id' => $report->assigned_responder_id,
+                    'responder' => $hasResponderLocation ? [
+                        'name' => $responder->name ?: ($responder->mobile_number ?? 'Responder'),
+                        'latitude' => (float) $responder->last_latitude,
+                        'longitude' => (float) $responder->last_longitude,
+                        'updated_at' => $responder->last_location_at,
+                    ] : null,
                     'created_at' => $report->created_at,
                 ];
             });

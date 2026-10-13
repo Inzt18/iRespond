@@ -18,13 +18,19 @@ new #[Title('Report Detail')] class extends Component {
 
     public string $flag_reason = '';
 
+    public string $authenticity_status = '';
+
+    public string $authenticity_note = '';
+
     public function mount(EmergencyReport $report): void
     {
-        $this->report = $report->load(['user', 'reviewer']);
+        $this->report = $report->load(['user', 'reviewer', 'assignedResponder', 'authenticityReviewer']);
         $this->status = $report->status;
         $this->admin_note = (string) ($report->admin_note ?? '');
         $this->flagged = (bool) $report->flagged;
         $this->flag_reason = (string) ($report->flag_reason ?? '');
+        $this->authenticity_status = (string) ($report->authenticity_status ?? '');
+        $this->authenticity_note = (string) ($report->authenticity_note ?? '');
     }
 
     public function saveReview(): void
@@ -47,9 +53,34 @@ new #[Title('Report Detail')] class extends Component {
             'reviewed_by' => Auth::id(),
         ]);
 
-        $this->report->refresh()->load(['user', 'reviewer']);
+        $this->report->refresh()->load(['user', 'reviewer', 'assignedResponder', 'authenticityReviewer']);
 
         Flux::toast(variant: 'success', text: __('Report review saved.'));
+    }
+
+    public function saveAuthenticityReview(): void
+    {
+        if (! $this->report->resolution_image_path) {
+            Flux::toast(variant: 'danger', text: __('No resolution photo to review.'));
+
+            return;
+        }
+
+        $validated = $this->validate([
+            'authenticity_status' => ['required', 'in:pending,approved,rejected'],
+            'authenticity_note' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $this->report->update([
+            'authenticity_status' => $validated['authenticity_status'],
+            'authenticity_note' => $validated['authenticity_note'] ?: null,
+            'authenticity_reviewed_at' => now(),
+            'authenticity_reviewed_by' => Auth::id(),
+        ]);
+
+        $this->report->refresh()->load(['user', 'reviewer', 'assignedResponder', 'authenticityReviewer']);
+
+        Flux::toast(variant: 'success', text: __('Resolution authenticity review saved.'));
     }
 }; ?>
 
@@ -70,7 +101,7 @@ new #[Title('Report Detail')] class extends Component {
 
         <div class="grid gap-6 lg:grid-cols-2">
             <flux:card class="space-y-3">
-                <flux:heading size="lg">{{ __('Evidence Image') }}</flux:heading>
+                <flux:heading size="lg">{{ __('Citizen Evidence Image') }}</flux:heading>
                 @if ($report->image_path)
                     <img
                         src="{{ Storage::disk('public')->url($report->image_path) }}"
@@ -89,6 +120,7 @@ new #[Title('Report Detail')] class extends Component {
                     <div class="flex justify-between gap-4"><dt>{{ __('CNN predicted') }}</dt><dd class="font-medium">{{ $report->predicted_type ?? '—' }}</dd></div>
                     <div class="flex justify-between gap-4"><dt>{{ __('Confidence') }}</dt><dd class="font-medium">{{ $report->confidence !== null ? number_format($report->confidence * 100, 1).'%' : '—' }}</dd></div>
                     <div class="flex justify-between gap-4"><dt>{{ __('Reporter') }}</dt><dd class="font-medium">{{ $report->user?->mobile_number ?? '—' }}</dd></div>
+                    <div class="flex justify-between gap-4"><dt>{{ __('Assigned responder') }}</dt><dd class="font-medium">{{ $report->assignedResponder?->name ?: ($report->assignedResponder?->mobile_number ?? '—') }}</dd></div>
                     <div class="flex justify-between gap-4"><dt>{{ __('Latitude') }}</dt><dd class="font-medium">{{ $report->latitude ?? '—' }}</dd></div>
                     <div class="flex justify-between gap-4"><dt>{{ __('Longitude') }}</dt><dd class="font-medium">{{ $report->longitude ?? '—' }}</dd></div>
                 </dl>
@@ -100,6 +132,10 @@ new #[Title('Report Detail')] class extends Component {
                         data-lat="{{ $report->latitude }}"
                         data-lng="{{ $report->longitude }}"
                         data-type="{{ $report->confirmed_type }}"
+                        data-image="{{ $report->imageUrl() }}"
+                        data-responder-lat="{{ $report->assignedResponder?->last_latitude }}"
+                        data-responder-lng="{{ $report->assignedResponder?->last_longitude }}"
+                        data-responder-name="{{ $report->assignedResponder?->name ?: ($report->assignedResponder?->mobile_number ?? 'Responder') }}"
                         class="h-56 w-full overflow-hidden rounded-lg bg-zinc-200 dark:bg-zinc-800"
                     ></div>
                     <flux:button
@@ -120,6 +156,45 @@ new #[Title('Report Detail')] class extends Component {
                 @endif
             </flux:card>
         </div>
+
+        <flux:card class="space-y-4">
+            <flux:heading size="lg">{{ __('Resolution Photo Authenticity') }}</flux:heading>
+
+            @if ($report->resolution_image_path)
+                <img
+                    src="{{ Storage::disk('public')->url($report->resolution_image_path) }}"
+                    alt="Resolution evidence"
+                    class="max-h-80 w-full rounded-lg object-contain bg-zinc-100 dark:bg-zinc-900"
+                />
+
+                <form wire:submit="saveAuthenticityReview" class="grid gap-4 md:grid-cols-2">
+                    <flux:select wire:model="authenticity_status" :label="__('Authenticity status')" required>
+                        <option value="pending">pending</option>
+                        <option value="approved">approved</option>
+                        <option value="rejected">rejected</option>
+                    </flux:select>
+
+                    <div class="md:col-span-2">
+                        <flux:textarea wire:model="authenticity_note" :label="__('Authenticity note')" rows="3" />
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <flux:button type="submit" variant="primary">{{ __('Save authenticity review') }}</flux:button>
+                    </div>
+                </form>
+
+                @if ($report->authenticity_reviewed_at)
+                    <flux:text class="text-xs">
+                        {{ __('Authenticity reviewed :when by :who', [
+                            'when' => $report->authenticity_reviewed_at,
+                            'who' => $report->authenticityReviewer?->mobile_number ?? $report->authenticityReviewer?->name ?? 'admin',
+                        ]) }}
+                    </flux:text>
+                @endif
+            @else
+                <flux:text>{{ __('No resolution photo uploaded yet. Responders must attach one when marking a case resolved.') }}</flux:text>
+            @endif
+        </flux:card>
 
         <flux:card class="space-y-4">
             <flux:heading size="lg">{{ __('Admin Review') }}</flux:heading>
@@ -161,6 +236,25 @@ new #[Title('Report Detail')] class extends Component {
 @assets
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<style>
+    .irespond-photo-pin {
+        width: 44px;
+        height: 44px;
+        border-radius: 9999px;
+        border: 3px solid var(--pin-color, #c1121f);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+        overflow: hidden;
+        background: #fff center/cover no-repeat;
+    }
+    .irespond-responder-pin {
+        width: 16px;
+        height: 16px;
+        border-radius: 9999px;
+        background: #0f766e;
+        border: 2px solid #fff;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    }
+</style>
 @endassets
 
 @script
@@ -172,11 +266,16 @@ new #[Title('Report Detail')] class extends Component {
         const lat = parseFloat(el.dataset.lat);
         const lng = parseFloat(el.dataset.lng);
         const type = el.dataset.type || '';
+        const imageUrl = el.dataset.image || '';
+        const responderLat = parseFloat(el.dataset.responderLat);
+        const responderLng = parseFloat(el.dataset.responderLng);
+        const responderName = el.dataset.responderName || 'Responder';
         const colors = {
             fire: '#c1121f',
             medical: '#2563eb',
             natural_disaster: '#ea580c',
         };
+        const color = colors[type] || '#c1121f';
 
         if (window.__iRespondReportMap) {
             window.__iRespondReportMap.remove();
@@ -191,13 +290,38 @@ new #[Title('Report Detail')] class extends Component {
             attribution: '&copy; OpenStreetMap contributors',
         }).addTo(map);
 
-        L.circleMarker([lat, lng], {
-            radius: 10,
-            color: '#ffffff',
-            weight: 2,
-            fillColor: colors[type] || '#c1121f',
-            fillOpacity: 0.95,
-        }).addTo(map);
+        const incidentIcon = L.divIcon({
+            className: '',
+            iconSize: [44, 44],
+            iconAnchor: [22, 22],
+            html: imageUrl
+                ? `<div class="irespond-photo-pin" style="--pin-color:${color};background-image:url('${imageUrl}')"></div>`
+                : `<div class="irespond-photo-pin" style="--pin-color:${color};background:${color}"></div>`,
+        });
+
+        const group = L.featureGroup();
+        group.addLayer(L.marker([lat, lng], { icon: incidentIcon }));
+
+        if (!Number.isNaN(responderLat) && !Number.isNaN(responderLng)) {
+            const responderIcon = L.divIcon({
+                className: '',
+                iconSize: [16, 16],
+                iconAnchor: [8, 8],
+                html: '<div class="irespond-responder-pin"></div>',
+            });
+            const rMarker = L.marker([responderLat, responderLng], { icon: responderIcon });
+            rMarker.bindPopup(`<strong>${responderName}</strong>`);
+            group.addLayer(rMarker);
+            group.addLayer(L.polyline([[responderLat, responderLng], [lat, lng]], {
+                color,
+                weight: 3,
+                opacity: 0.85,
+                dashArray: '8 6',
+            }));
+        }
+
+        group.addTo(map);
+        map.fitBounds(group.getBounds().pad(0.35));
 
         setTimeout(() => map.invalidateSize(), 150);
     })();

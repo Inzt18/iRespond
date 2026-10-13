@@ -6,17 +6,11 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class RegisterRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized.
-     */
     public function authorize(): bool
     {
         return true;
     }
 
-    /**
-     * Validation rules.
-     */
     public function rules(): array
     {
         return [
@@ -26,12 +20,13 @@ class RegisterRequest extends FormRequest
                 'regex:/^09[0-9]{9}$/',
                 'unique:users,mobile_number',
             ],
+            'otp' => [
+                'required',
+                'digits:6',
+            ],
         ];
     }
 
-    /**
-     * Custom validation messages.
-     */
     public function messages(): array
     {
         return [
@@ -39,6 +34,8 @@ class RegisterRequest extends FormRequest
             'mobile_number.digits' => 'Mobile number must be exactly 11 digits.',
             'mobile_number.regex' => 'Mobile number must start with 09.',
             'mobile_number.unique' => 'This mobile number is already registered.',
+            'otp.required' => 'OTP code is required.',
+            'otp.digits' => 'OTP code must be exactly 6 digits.',
         ];
     }
 }

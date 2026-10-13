@@ -39,4 +39,22 @@ return [
         'url' => env('CNN_SERVICE_URL', 'http://127.0.0.1:8001'),
     ],
 
+    'otp' => [
+        'ttl_minutes' => (int) env('OTP_TTL_MINUTES', 10),
+        // When true (default in local), API responses include debug_otp for Flutter/dev testing.
+        'expose_in_response' => filter_var(
+            env('OTP_EXPOSE_IN_RESPONSE', env('APP_ENV') === 'local' ? 'true' : 'false'),
+            FILTER_VALIDATE_BOOLEAN
+        ),
+    ],
+
+    'sms' => [
+        // log | semaphore
+        'driver' => env('SMS_DRIVER', 'log'),
+        'semaphore' => [
+            'api_key' => env('SEMAPHORE_API_KEY'),
+            'sender' => env('SEMAPHORE_SENDER'),
+        ],
+    ],
+
 ];

@@ -16,12 +16,12 @@ new #[Title('GIS Map')] class extends Component {
     public bool $flaggedOnly = false;
 
     /**
-     * @return list<array{id:int,lat:float,lng:float,type:string,status:string,color:string,label:string,url:string,flagged:bool}>
+     * @return list<array<string, mixed>>
      */
     public function markers(): array
     {
         $query = EmergencyReport::query()
-            ->with('user')
+            ->with(['user', 'assignedResponder'])
             ->whereNotNull('latitude')
             ->whereNotNull('longitude')
             ->latest();
@@ -47,6 +47,11 @@ new #[Title('GIS Map')] class extends Component {
         ];
 
         return $query->limit(500)->get()->map(function (EmergencyReport $report) use ($colors) {
+            $responder = $report->assignedResponder;
+            $hasResponderLocation = $responder
+                && $responder->last_latitude !== null
+                && $responder->last_longitude !== null;
+
             return [
                 'id' => $report->id,
                 'lat' => (float) $report->latitude,
@@ -58,6 +63,13 @@ new #[Title('GIS Map')] class extends Component {
                 'url' => route('admin.reports.show', $report),
                 'flagged' => (bool) $report->flagged || $report->hasIntegrityIssues(),
                 'mobile' => $report->user?->mobile_number ?? '—',
+                'image_url' => $report->imageUrl(),
+                'responder' => $hasResponderLocation ? [
+                    'lat' => (float) $responder->last_latitude,
+                    'lng' => (float) $responder->last_longitude,
+                    'name' => $responder->name ?: ($responder->mobile_number ?? 'Responder'),
+                    'updated_at' => $responder->last_location_at?->toIso8601String(),
+                ] : null,
             ];
         })->values()->all();
     }
@@ -69,6 +81,7 @@ new #[Title('GIS Map')] class extends Component {
         return [
             'markers' => $markers,
             'markerCount' => count($markers),
+            'routeCount' => collect($markers)->whereNotNull('responder')->count(),
         ];
     }
 }; ?>
@@ -78,9 +91,12 @@ new #[Title('GIS Map')] class extends Component {
         <div>
             <p class="font-display text-xs font-semibold uppercase tracking-[0.18em] text-emergency">{{ __('GIS Overview') }}</p>
             <flux:heading size="xl" class="font-display mt-1 text-3xl tracking-wide">{{ __('Active Emergency Map') }}</flux:heading>
-            <flux:text class="mt-1">{{ __('Monitor case locations. Responder layer can be added later.') }}</flux:text>
+            <flux:text class="mt-1">{{ __('Incident photo pins with responder direction lines when GPS is available.') }}</flux:text>
         </div>
-        <flux:text class="text-sm">{{ __(':count mapped cases', ['count' => $markerCount]) }}</flux:text>
+        <div class="text-right text-sm">
+            <flux:text>{{ __(':count mapped cases', ['count' => $markerCount]) }}</flux:text>
+            <flux:text class="block">{{ __(':count active responder routes', ['count' => $routeCount]) }}</flux:text>
+        </div>
     </div>
 
     <flux:card class="grid gap-3 md:grid-cols-4">
@@ -108,6 +124,7 @@ new #[Title('GIS Map')] class extends Component {
             <span class="inline-flex items-center gap-1"><span class="size-2.5 rounded-full bg-[#c1121f]"></span> Fire</span>
             <span class="inline-flex items-center gap-1"><span class="size-2.5 rounded-full bg-[#2563eb]"></span> Medical</span>
             <span class="inline-flex items-center gap-1"><span class="size-2.5 rounded-full bg-[#ea580c]"></span> Disaster</span>
+            <span class="inline-flex items-center gap-1"><span class="size-2.5 rounded-full bg-[#0f766e]"></span> Responder</span>
         </div>
     </flux:card>
 
@@ -125,6 +142,28 @@ new #[Title('GIS Map')] class extends Component {
 @assets
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<style>
+    .irespond-photo-pin {
+        width: 44px;
+        height: 44px;
+        border-radius: 9999px;
+        border: 3px solid var(--pin-color, #c1121f);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+        overflow: hidden;
+        background: #fff center/cover no-repeat;
+    }
+    .irespond-photo-pin.is-flagged {
+        box-shadow: 0 0 0 3px #facc15, 0 2px 8px rgba(0, 0, 0, 0.35);
+    }
+    .irespond-responder-pin {
+        width: 16px;
+        height: 16px;
+        border-radius: 9999px;
+        background: #0f766e;
+        border: 2px solid #fff;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    }
+</style>
 @endassets
 
 @script
@@ -149,27 +188,52 @@ new #[Title('GIS Map')] class extends Component {
 
         const group = L.featureGroup();
 
+        const photoIcon = (m) => L.divIcon({
+            className: '',
+            iconSize: [44, 44],
+            iconAnchor: [22, 22],
+            popupAnchor: [0, -22],
+            html: m.image_url
+                ? `<div class="irespond-photo-pin${m.flagged ? ' is-flagged' : ''}" style="--pin-color:${m.color};background-image:url('${m.image_url}')"></div>`
+                : `<div class="irespond-photo-pin${m.flagged ? ' is-flagged' : ''}" style="--pin-color:${m.color};background:${m.color}"></div>`,
+        });
+
+        const responderIcon = L.divIcon({
+            className: '',
+            iconSize: [16, 16],
+            iconAnchor: [8, 8],
+            html: '<div class="irespond-responder-pin"></div>',
+        });
+
         markers.forEach((m) => {
-            const marker = L.circleMarker([m.lat, m.lng], {
-                radius: m.flagged ? 11 : 9,
-                color: '#ffffff',
-                weight: 2,
-                fillColor: m.color,
-                fillOpacity: 0.95,
-            });
+            const marker = L.marker([m.lat, m.lng], { icon: photoIcon(m) });
 
             marker.bindPopup(
                 `<strong>#${m.id} ${m.label}</strong><br>` +
                 `Status: ${m.status}<br>` +
                 `Reporter: ${m.mobile}<br>` +
+                (m.image_url ? `<img src="${m.image_url}" alt="" style="margin-top:6px;max-width:160px;border-radius:8px;" /><br>` : '') +
                 `<a href="${m.url}">Open report</a>`
             );
 
-            marker.on('click', () => {
-                marker.openPopup();
-            });
-
             group.addLayer(marker);
+
+            if (m.responder) {
+                const r = m.responder;
+                const responderMarker = L.marker([r.lat, r.lng], { icon: responderIcon });
+                responderMarker.bindPopup(
+                    `<strong>Responder</strong><br>${r.name}<br>Toward case #${m.id}`
+                );
+                group.addLayer(responderMarker);
+
+                const line = L.polyline([[r.lat, r.lng], [m.lat, m.lng]], {
+                    color: m.color,
+                    weight: 3,
+                    opacity: 0.85,
+                    dashArray: '8 6',
+                });
+                group.addLayer(line);
+            }
         });
 
         group.addTo(map);

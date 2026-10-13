@@ -7,6 +7,7 @@ use App\Http\Controllers\ResponderHotlineController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
+Route::post('/register/send-otp', [AuthController::class, 'sendRegistrationOtp']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
@@ -28,5 +29,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/emergencies', [ResponderEmergencyController::class, 'index']);
         Route::get('/emergencies/{report}', [ResponderEmergencyController::class, 'show']);
         Route::patch('/emergencies/{report}/status', [ResponderEmergencyController::class, 'updateStatus']);
+        // POST alias for multipart resolve (Flutter image upload).
+        Route::post('/emergencies/{report}/status', [ResponderEmergencyController::class, 'updateStatus']);
+        Route::post('/location', [ResponderEmergencyController::class, 'updateLocation']);
     });
 });
