@@ -20,6 +20,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::livewire('admin/analytics', 'pages::admin.analytics')->name('admin.analytics');
     Route::livewire('admin/notifications', 'pages::admin.notifications')->name('admin.notifications');
     Route::livewire('admin/reports', 'pages::admin.reports')->name('admin.reports');
+    Route::livewire('admin/resolutions', 'pages::admin.resolutions')->name('admin.resolutions');
     Route::livewire('admin/reports/{report}', 'pages::admin.report-show')->name('admin.reports.show');
     Route::livewire('admin/map', 'pages::admin.map')->name('admin.map');
     Route::livewire('admin/responders', 'pages::admin.responders')->name('admin.responders');

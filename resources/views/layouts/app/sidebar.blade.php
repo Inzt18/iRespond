@@ -42,6 +42,9 @@
                     <flux:sidebar.item icon="clipboard-document-list" :href="route('admin.reports')" :current="request()->routeIs('admin.reports') || request()->routeIs('admin.reports.show')" wire:navigate>
                         {{ __('Reports') }}
                     </flux:sidebar.item>
+                    <flux:sidebar.item icon="camera" :href="route('admin.resolutions')" :current="request()->routeIs('admin.resolutions')" wire:navigate>
+                        {{ __('Responder Resolution Image') }}
+                    </flux:sidebar.item>
                     <flux:sidebar.item icon="map" :href="route('admin.map')" :current="request()->routeIs('admin.map')" wire:navigate>
                         {{ __('GIS Map') }}
                     </flux:sidebar.item>
