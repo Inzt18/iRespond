@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\AdminReportExportController;
+use App\Http\Controllers\AdminReportPdfController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -20,6 +22,8 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::livewire('admin/analytics', 'pages::admin.analytics')->name('admin.analytics');
     Route::livewire('admin/notifications', 'pages::admin.notifications')->name('admin.notifications');
     Route::livewire('admin/reports', 'pages::admin.reports')->name('admin.reports');
+    Route::get('admin/reports/export', AdminReportExportController::class)->name('admin.reports.export');
+    Route::get('admin/reports/export-pdf', AdminReportPdfController::class)->name('admin.reports.export-pdf');
     Route::livewire('admin/resolutions', 'pages::admin.resolutions')->name('admin.resolutions');
     Route::livewire('admin/reports/{report}', 'pages::admin.report-show')->name('admin.reports.show');
     Route::livewire('admin/map', 'pages::admin.map')->name('admin.map');

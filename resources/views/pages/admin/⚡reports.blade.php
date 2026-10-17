@@ -43,30 +43,28 @@ new #[Title('Emergency Reports')] class extends Component {
 
     public function with(): array
     {
-        $query = EmergencyReport::query()->with('user')->latest();
+        $filters = [
+            'status' => $this->status,
+            'type' => $this->type,
+            'search' => $this->search,
+            'flagged' => $this->flaggedOnly,
+        ];
 
-        if ($this->status !== '') {
-            $query->where('status', $this->status);
-        }
-
-        if ($this->type !== '') {
-            $query->where('confirmed_type', $this->type);
-        }
-
-        if ($this->flaggedOnly) {
-            $query->where('flagged', true);
-        }
-
-        if (trim($this->search) !== '') {
-            $search = trim($this->search);
-            $query->where(function ($q) use ($search) {
-                $q->where('id', $search)
-                    ->orWhereHas('user', fn ($u) => $u->where('mobile_number', 'like', "%{$search}%"));
-            });
-        }
+        $reports = EmergencyReport::query()
+            ->with('user')
+            ->filter($filters)
+            ->latest()
+            ->paginate(15);
 
         return [
-            'reports' => $query->paginate(15),
+            'reports' => $reports,
+            // Same filters, passed to the CSV export route.
+            'exportParams' => array_filter([
+                'status' => $this->status,
+                'type' => $this->type,
+                'search' => trim($this->search),
+                'flagged' => $this->flaggedOnly ? 1 : null,
+            ], fn ($v) => $v !== null && $v !== ''),
         ];
     }
 }; ?>
@@ -77,9 +75,27 @@ new #[Title('Emergency Reports')] class extends Component {
                 <flux:heading size="xl">{{ __('Emergency Reports') }}</flux:heading>
                 <flux:text class="mt-1">{{ __('Monitor all citizen submissions for integrity.') }}</flux:text>
             </div>
-            <flux:button size="sm" variant="ghost" :href="route('admin.analytics')" wire:navigate>
-                {{ __('Analytics') }}
-            </flux:button>
+            <div class="flex items-center gap-2">
+                <flux:button
+                    size="sm"
+                    icon="arrow-down-tray"
+                    :href="route('admin.reports.export', $exportParams)"
+                    :disabled="$reports->total() === 0"
+                >
+                    {{ __('Download CSV') }} ({{ $reports->total() }})
+                </flux:button>
+                <flux:button
+                    size="sm"
+                    icon="document-arrow-down"
+                    :href="route('admin.reports.export-pdf', $exportParams)"
+                    :disabled="$reports->total() === 0"
+                >
+                    {{ __('Download PDF') }}
+                </flux:button>
+                <flux:button size="sm" variant="ghost" :href="route('admin.analytics')" wire:navigate>
+                    {{ __('Analytics') }}
+                </flux:button>
+            </div>
         </div>
 
         <flux:card>

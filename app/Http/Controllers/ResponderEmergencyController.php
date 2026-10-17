@@ -73,6 +73,19 @@ class ResponderEmergencyController extends Controller
             ], 403);
         }
 
+        // PHP drops failed uploads silently, which surfaces as "required"; report the real cause.
+        if ($request->input('status') === 'resolved') {
+            $file = $request->file('resolution_image');
+            if ($file === null || ! $file->isValid()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $file === null
+                        ? 'Server received no resolution photo (content-type: '.$request->header('Content-Type').', upload_max_filesize='.ini_get('upload_max_filesize').', post_max_size='.ini_get('post_max_size').').'
+                        : 'Photo upload failed on server: '.$file->getErrorMessage(),
+                ], 422);
+            }
+        }
+
         $validated = $request->validate([
             'status' => ['required', 'in:responding,resolved'],
             'resolution_image' => ['required_if:status,resolved', 'nullable', 'image', 'max:10240'],

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;
@@ -48,6 +49,40 @@ class EmergencyReport extends Model
             'reviewed_at' => 'datetime',
             'authenticity_reviewed_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Shared filter used by the admin reports list and the CSV export,
+     * so both always return exactly the same set of rows.
+     *
+     * @param  array{status?: ?string, type?: ?string, search?: ?string, flagged?: ?bool}  $filters
+     */
+    public function scopeFilter(Builder $query, array $filters): Builder
+    {
+        $status = $filters['status'] ?? '';
+        $type = $filters['type'] ?? '';
+        $search = trim((string) ($filters['search'] ?? ''));
+
+        if ($status !== '') {
+            $query->where('status', $status);
+        }
+
+        if ($type !== '') {
+            $query->where('confirmed_type', $type);
+        }
+
+        if (! empty($filters['flagged'])) {
+            $query->where('flagged', true);
+        }
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('id', $search)
+                    ->orWhereHas('user', fn ($u) => $u->where('mobile_number', 'like', "%{$search}%"));
+            });
+        }
+
+        return $query;
     }
 
     public function user(): BelongsTo
