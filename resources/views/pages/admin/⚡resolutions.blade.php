@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\EmergencyReport;
+use App\Models\RejectedResolution;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -36,6 +37,10 @@ new #[Title('Responder Resolution Images')] class extends Component {
             'authenticity_reviewed_by' => Auth::id(),
         ]);
 
+        if ($decision === 'rejected') {
+            $report->archiveRejectedResolution(Auth::id());
+        }
+
         Flux::toast(
             variant: $decision === 'rejected' ? 'danger' : 'success',
             text: __('Resolution #:id marked :status.', [
@@ -62,6 +67,10 @@ new #[Title('Responder Resolution Images')] class extends Component {
             'pendingCount' => (clone $base)->where('authenticity_status', 'pending')->count(),
             'approvedCount' => (clone $base)->where('authenticity_status', 'approved')->count(),
             'rejectedCount' => (clone $base)->where('authenticity_status', 'rejected')->count(),
+            'rejectedArchive' => RejectedResolution::query()
+                ->with(['report', 'responder', 'rejector'])
+                ->latest('rejected_at')
+                ->paginate(10, pageName: 'archivePage'),
         ];
     }
 }; ?>
@@ -141,4 +150,64 @@ new #[Title('Responder Resolution Images')] class extends Component {
     @if (method_exists($reports, 'links'))
         <div>{{ $reports->links() }}</div>
     @endif
+
+    <flux:card class="space-y-4">
+        <div>
+            <flux:heading size="lg">{{ __('Rejected resolutions') }}</flux:heading>
+            <flux:text class="mt-1">
+                {{ __('Permanent record of every rejected resolution photo, kept even if the responder deletes or replaces it.') }}
+            </flux:text>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead>
+                    <tr class="border-b border-zinc-200 text-zinc-500">
+                        <th class="py-2 pe-4 font-semibold">{{ __('Photo') }}</th>
+                        <th class="py-2 pe-4 font-semibold">{{ __('Report') }}</th>
+                        <th class="py-2 pe-4 font-semibold">{{ __('Type') }}</th>
+                        <th class="py-2 pe-4 font-semibold">{{ __('Responder') }}</th>
+                        <th class="py-2 pe-4 font-semibold">{{ __('Rejected on') }}</th>
+                        <th class="py-2 pe-4 font-semibold">{{ __('Rejected by') }}</th>
+                        <th class="py-2 pe-4 font-semibold">{{ __('Note') }}</th>
+                        <th class="py-2"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($rejectedArchive as $item)
+                        <tr class="border-b border-zinc-100 align-middle">
+                            <td class="py-2 pe-4">
+                                @if ($item->imageUrl())
+                                    <a href="{{ $item->imageUrl() }}" target="_blank" rel="noopener">
+                                        <img src="{{ $item->imageUrl() }}" alt="" class="h-14 w-20 rounded-md bg-zinc-100 object-cover" />
+                                    </a>
+                                @else
+                                    <span class="text-zinc-400">{{ __('Image removed') }}</span>
+                                @endif
+                            </td>
+                            <td class="py-2 pe-4 font-semibold">#{{ $item->emergency_report_id ?? '—' }}</td>
+                            <td class="py-2 pe-4 capitalize">{{ str_replace('_', ' ', $item->report_type ?? '—') }}</td>
+                            <td class="py-2 pe-4">{{ $item->responder?->name ?: ($item->responder?->mobile_number ?? '—') }}</td>
+                            <td class="py-2 pe-4 whitespace-nowrap">{{ $item->rejected_at?->timezone(config('app.timezone'))->format('M d, Y g:i A') ?? '—' }}</td>
+                            <td class="py-2 pe-4">{{ $item->rejector?->name ?: ($item->rejector?->mobile_number ?? '—') }}</td>
+                            <td class="py-2 pe-4 max-w-xs truncate">{{ $item->note ?: '—' }}</td>
+                            <td class="py-2 text-end">
+                                @if ($item->report)
+                                    <flux:button size="sm" variant="ghost" :href="route('admin.reports.show', $item->report)" wire:navigate>
+                                        {{ __('Open report') }}
+                                    </flux:button>
+                                @endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="8" class="py-6 text-center text-zinc-500">{{ __('No rejected resolutions yet.') }}</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        <div>{{ $rejectedArchive->links() }}</div>
+    </flux:card>
 </div>

@@ -114,6 +114,53 @@ class EmergencyReport extends Model
         return Storage::disk('public')->url($this->image_path);
     }
 
+    /**
+     * Record a rejected resolution photo in the admin-side archive and keep a
+     * copy of the image, so it survives the responder deleting/replacing it.
+     * Safe to call repeatedly for the same photo.
+     */
+    public function archiveRejectedResolution(?int $reviewerId = null): ?RejectedResolution
+    {
+        $source = $this->resolution_image_path;
+
+        if (! $source) {
+            return null;
+        }
+
+        $existing = RejectedResolution::query()
+            ->where('emergency_report_id', $this->id)
+            ->where('source_image_path', $source)
+            ->first();
+
+        if ($existing) {
+            $existing->update([
+                'rejected_by' => $reviewerId ?? $existing->rejected_by,
+                'note' => $this->authenticity_note ?? $existing->note,
+            ]);
+
+            return $existing;
+        }
+
+        $disk = Storage::disk('public');
+        $archived = null;
+
+        if ($disk->exists($source)) {
+            $archived = 'emergencies/resolutions/rejected/'.$this->id.'-'.basename($source);
+            $disk->copy($source, $archived);
+        }
+
+        return RejectedResolution::create([
+            'emergency_report_id' => $this->id,
+            'responder_id' => $this->assigned_responder_id,
+            'rejected_by' => $reviewerId,
+            'report_type' => $this->confirmed_type,
+            'source_image_path' => $source,
+            'archived_image_path' => $archived,
+            'note' => $this->authenticity_note,
+            'rejected_at' => now(),
+        ]);
+    }
+
     public function resolutionImageUrl(): ?string
     {
         if (! $this->resolution_image_path) {

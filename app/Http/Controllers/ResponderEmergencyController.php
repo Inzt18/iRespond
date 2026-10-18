@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\EmergencyReport;
+use App\Models\RejectedResolution;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -16,6 +17,10 @@ class ResponderEmergencyController extends Controller
     {
         $user = $request->user();
         $status = $request->query('status', 'active');
+
+        if ($status === 'rejected') {
+            return $this->rejectedResolutions($request);
+        }
 
         $query = EmergencyReport::query()
             ->with('user:id,mobile_number,name')
@@ -156,6 +161,49 @@ class ResponderEmergencyController extends Controller
             'latitude' => (float) $user->last_latitude,
             'longitude' => (float) $user->last_longitude,
             'updated_at' => $user->last_location_at,
+        ]);
+    }
+
+    /**
+     * Rejected resolution photos for this responder's department, read from the
+     * permanent archive so they still show after the report's photo is replaced.
+     */
+    private function rejectedResolutions(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $items = RejectedResolution::query()
+            ->with(['report.user:id,mobile_number,name', 'responder:id,name,mobile_number', 'rejector:id,name,mobile_number'])
+            ->where('report_type', $user->department_type)
+            ->latest('rejected_at')
+            ->get()
+            ->map(function (RejectedResolution $item) {
+                $report = $item->report;
+
+                return [
+                    'id' => $item->emergency_report_id,
+                    'rejection_id' => $item->id,
+                    'confirmed_type' => $item->report_type,
+                    'status' => 'rejected',
+                    'report_status' => $report?->status,
+                    'latitude' => $report?->latitude,
+                    'longitude' => $report?->longitude,
+                    'reporter_mobile' => $report?->user?->mobile_number,
+                    'reporter_name' => $report?->user?->name,
+                    'rejected_image_url' => $item->imageUrl(),
+                    'rejection_note' => $item->note,
+                    'responder_name' => $item->responder?->name ?: $item->responder?->mobile_number,
+                    'rejected_by_name' => $item->rejector?->name ?: $item->rejector?->mobile_number,
+                    'rejected_at' => $item->rejected_at,
+                    'created_at' => $item->rejected_at ?? $item->created_at,
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'department_type' => $user->department_type,
+            'department_name' => $user->department_name,
+            'reports' => $items,
         ]);
     }
 

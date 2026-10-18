@@ -78,6 +78,10 @@ new #[Title('Report Detail')] class extends Component {
             'authenticity_reviewed_by' => Auth::id(),
         ]);
 
+        if ($validated['authenticity_status'] === 'rejected') {
+            $this->report->archiveRejectedResolution(Auth::id());
+        }
+
         $this->report->refresh()->load(['user', 'reviewer', 'assignedResponder', 'authenticityReviewer']);
 
         Flux::toast(variant: 'success', text: __('Resolution authenticity review saved.'));
